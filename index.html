@@ -1,0 +1,263 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Global Explorer | Discover Your World</title>
+
+    <meta name="description"
+          content="Explore countries, study opportunities, living costs, careers and lifestyles around the world.">
+
+    <!-- Leaflet map library -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <a href="#" class="logo">
+            <span class="logo-icon">🌍</span>
+            Global<span>Explorer</span>
+        </a>
+
+        <nav>
+            <a href="#explore">Explore</a>
+            <a href="#features">Features</a>
+            <a href="#about">About</a>
+        </nav>
+
+        <button class="header-button"
+                onclick="document.getElementById('explore').scrollIntoView({behavior:'smooth'})">
+            Explore World ↗
+        </button>
+    </header>
+
+    <main>
+
+        <section class="hero">
+            <div class="hero-content">
+                <div class="eyebrow">
+                    <span class="status-dot"></span>
+                    YOUR WORLD, EXPLAINED
+                </div>
+
+                <h1>
+                    The world is<br>
+                    yours to <span>explore.</span>
+                </h1>
+
+                <p>
+                    Discover countries, compare living costs, explore
+                    universities and find opportunities around the globe.
+                    Your next chapter starts here.
+                </p>
+
+                <button class="primary-button"
+                        onclick="document.getElementById('explore').scrollIntoView({behavior:'smooth'})">
+                    Start Exploring <span>→</span>
+                </button>
+
+                <div class="hero-note">
+                    ONE WORLD. ENDLESS POSSIBILITIES.
+                </div>
+            </div>
+
+            <div class="hero-visual">
+                <div class="globe-orbit orbit-one"></div>
+                <div class="globe-orbit orbit-two"></div>
+
+                <div class="globe">
+                    <span>🌎</span>
+                </div>
+
+                <div class="floating-card floating-top">
+                    <span class="floating-icon">🎓</span>
+                    <div>
+                        <strong>Study Anywhere</strong>
+                        <small>Explore global education</small>
+                    </div>
+                </div>
+
+                <div class="floating-card floating-bottom">
+                    <span class="floating-icon">💰</span>
+                    <div>
+                        <strong>Compare Costs</strong>
+                        <small>Plan your next move</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="explorer-section" id="explore">
+
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">THE WORLD AT YOUR FINGERTIPS</div>
+                    <h2>Where will you <span>go?</span></h2>
+                    <p>Select any country on the map to begin exploring.</p>
+                </div>
+            </div>
+
+            <div class="explorer-layout">
+
+                <div class="map-container">
+                    <div class="map-toolbar">
+                        <div>
+                            <span class="live-dot"></span>
+                            INTERACTIVE WORLD MAP
+                        </div>
+                        <span class="map-hint">Click a country to explore</span>
+                    </div>
+
+                    <div id="map"></div>
+
+                    <div class="map-footer">
+                        <span>🌍 Explore countries worldwide</span>
+                        <span>Map data © OpenStreetMap contributors</span>
+                    </div>
+                </div>
+
+                <aside class="country-panel" id="country-panel">
+
+                    <div class="panel-placeholder" id="panel-placeholder">
+                        <div class="placeholder-icon">🌐</div>
+                        <h3>Your next destination?</h3>
+                        <p>
+                            Select a country on the map to discover its
+                            education opportunities, living costs and more.
+                        </p>
+
+                        <div class="placeholder-tip">
+                            <span>↖</span>
+                            Start by clicking any country
+                        </div>
+                    </div>
+
+                    <div class="country-details" id="country-details" hidden>
+                        <div class="country-banner">
+                            <span id="country-flag">🌍</span>
+                            <span class="country-label">COUNTRY OVERVIEW</span>
+                        </div>
+
+                        <h2 id="country-name">Country</h2>
+                        <p id="country-description"></p>
+
+                        <div class="country-facts">
+                            <div class="fact-card">
+                                <small>CAPITAL</small>
+                                <strong id="country-capital">—</strong>
+                            </div>
+
+                            <div class="fact-card">
+                                <small>REGION</small>
+                                <strong id="country-region">—</strong>
+                            </div>
+
+                            <div class="fact-card">
+                                <small>POPULATION</small>
+                                <strong id="country-population">—</strong>
+                            </div>
+
+                            <div class="fact-card">
+                                <small>CURRENCY</small>
+                                <strong id="country-currency">—</strong>
+                            </div>
+                        </div>
+
+                        <div class="panel-divider"></div>
+
+                        <h3>Explore this country</h3>
+
+                        <div class="topic-list">
+                            <div>🎓 <span>Study & Universities</span></div>
+                            <div>💰 <span>Cost of Living</span></div>
+                            <div>💼 <span>Jobs & Careers</span></div>
+                            <div>🛂 <span>Visas & Immigration</span></div>
+                            <div>🌐 <span>Culture & Lifestyle</span></div>
+                        </div>
+
+                        <button class="primary-button explore-country-button"
+                                id="explore-country-button">
+                            Explore Country <span>↗</span>
+                        </button>
+
+                        <p class="panel-note">
+                            Detailed country information will be added
+                            as the platform develops.
+                        </p>
+                    </div>
+
+                </aside>
+            </div>
+        </section>
+
+        <section class="features-section" id="features">
+            <div class="eyebrow">MORE THAN A MAP</div>
+            <h2>Explore the world.<br><span>Make informed decisions.</span></h2>
+
+            <div class="feature-grid">
+
+                <article class="feature-card">
+                    <div class="feature-icon">🎓</div>
+                    <h3>Study Abroad</h3>
+                    <p>Explore universities, tuition fees, scholarships
+                       and admission requirements.</p>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Cost of Living</h3>
+                    <p>Understand accommodation, food, transport
+                       and everyday expenses.</p>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon">💼</div>
+                    <h3>Careers & Economy</h3>
+                    <p>Discover industries, salaries and employment
+                       opportunities.</p>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Country Explorer</h3>
+                    <p>Learn about cultures, languages, healthcare,
+                       safety and quality of life.</p>
+                </article>
+
+            </div>
+        </section>
+
+        <section class="about-section" id="about">
+            <div class="about-symbol">🌍</div>
+            <div>
+                <div class="eyebrow">OUR VISION</div>
+                <h2>A world without information barriers.</h2>
+                <p>
+                    Global Explorer aims to make information about countries,
+                    education and opportunities easier to discover and compare.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <a href="#" class="logo">🌍 Global<span>Explorer</span></a>
+        <p>Explore more. Understand better. Dream bigger.</p>
+        <small>© 2026 Global Explorer · An independent exploration project</small>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
+```
