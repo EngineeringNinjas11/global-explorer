@@ -1,414 +1,381 @@
-```javascript
+
 /* ==========================================
    GLOBAL EXPLORER — INTERACTIVE WORLD MAP
    ========================================== */
 
-const mapElement = document.getElementById("map");
+document.addEventListener("DOMContentLoaded", initGlobalExplorer);
 
-if (mapElement && typeof L !== "undefined") {
+async function initGlobalExplorer() {
+    const mapElement = document.getElementById("map");
 
-    // 1. INITIALIZE THE MAP
+    if (!mapElement) {
+        console.error("Map container #map was not found.");
+        return;
+    }
 
+    if (typeof L === "undefined") {
+        showMapError("The map library could not load. Please refresh the page.");
+        return;
+    }
+
+    // Create the interactive world map.
     const map = L.map("map", {
-        center: [25, 10],
+        center: [20, 0],
         zoom: 2,
         minZoom: 2,
-        maxZoom: 7,
+        maxZoom: 8,
         worldCopyJump: true
     });
 
-    // OpenStreetMap tiles
-
+    // OpenStreetMap base layer.
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        noWrap: true,
         maxZoom: 19
     }).addTo(map);
 
+    let countryLayer;
+    let selectedLayer = null;
+    let selectedCountry = null;
 
-    // 2. COUNTRY INFORMATION DATABASE
-    // Initial examples; we will expand this database later.
-
-    const countryData = {
-
-        "India": {
-            flag: "🇮🇳",
-            capital: "New Delhi",
-            region: "South Asia",
-            population: "1.4 billion+",
-            currency: "Indian Rupee",
-            description: "Explore India's education system, universities, economy, careers and lifestyle."
-        },
-
-        "Germany": {
-            flag: "🇩🇪",
-            capital: "Berlin",
-            region: "Europe",
-            population: "84 million",
-            currency: "Euro",
-            description: "Discover German universities, engineering programmes, career opportunities and living costs."
-        },
-
-        "Slovakia": {
-            flag: "🇸🇰",
-            capital: "Bratislava",
-            region: "Europe",
-            population: "5.4 million",
-            currency: "Euro",
-            description: "Explore Slovak universities, European study opportunities, accommodation and lifestyle."
-        },
-
-        "Italy": {
-            flag: "🇮🇹",
-            capital: "Rome",
-            region: "Europe",
-            population: "59 million",
-            currency: "Euro",
-            description: "Discover Italian universities, scholarships, regional living costs and cultural experiences."
-        },
-
-        "Hungary": {
-            flag: "🇭🇺",
-            capital: "Budapest",
-            region: "Europe",
-            population: "9.6 million",
-            currency: "Hungarian Forint",
-            description: "Explore Hungarian universities, international programmes, student life and living expenses."
-        },
-
-        "Canada": {
-            flag: "🇨🇦",
-            capital: "Ottawa",
-            region: "North America",
-            population: "41 million",
-            currency: "Canadian Dollar",
-            description: "Discover Canadian colleges, universities, career pathways and regional living costs."
-        },
-
-        "Portugal": {
-            flag: "🇵🇹",
-            capital: "Lisbon",
-            region: "Europe",
-            population: "10.6 million",
-            currency: "Euro",
-            description: "Explore Portuguese universities, education opportunities, lifestyle and accommodation."
-        },
-
-        "Romania": {
-            flag: "🇷🇴",
-            capital: "Bucharest",
-            region: "Europe",
-            population: "19 million",
-            currency: "Romanian Leu",
-            description: "Discover Romanian universities, international courses, living expenses and career opportunities."
-        },
-
-        "United States of America": {
-            flag: "🇺🇸",
-            capital: "Washington, D.C.",
-            region: "North America",
-            population: "340 million",
-            currency: "US Dollar",
-            description: "Explore American universities, career opportunities, education costs and diverse lifestyles."
-        },
-
-        "United Kingdom": {
-            flag: "🇬🇧",
-            capital: "London",
-            region: "Europe",
-            population: "69 million",
-            currency: "Pound Sterling",
-            description: "Discover British universities, degree programmes, scholarships and living expenses."
-        },
-
-        "France": {
-            flag: "🇫🇷",
-            capital: "Paris",
-            region: "Europe",
-            population: "68 million",
-            currency: "Euro",
-            description: "Explore French universities, international programmes, career opportunities and culture."
-        },
-
-        "Australia": {
-            flag: "🇦🇺",
-            capital: "Canberra",
-            region: "Oceania",
-            population: "27 million",
-            currency: "Australian Dollar",
-            description: "Discover Australian universities, international education, employment and lifestyle."
-        },
-
-        "Japan": {
-            flag: "🇯🇵",
-            capital: "Tokyo",
-            region: "East Asia",
-            population: "123 million",
-            currency: "Japanese Yen",
-            description: "Explore Japanese universities, technology, education programmes and cultural experiences."
-        },
-
-        "South Korea": {
-            flag: "🇰🇷",
-            capital: "Seoul",
-            region: "East Asia",
-            population: "52 million",
-            currency: "South Korean Won",
-            description: "Discover South Korean universities, technology, international education and lifestyle."
-        },
-
-        "Spain": {
-            flag: "🇪🇸",
-            capital: "Madrid",
-            region: "Europe",
-            population: "49 million",
-            currency: "Euro",
-            description: "Explore Spanish universities, study opportunities, regional living costs and culture."
-        },
-
-        "Poland": {
-            flag: "🇵🇱",
-            capital: "Warsaw",
-            region: "Europe",
-            population: "37 million",
-            currency: "Polish Zloty",
-            description: "Discover Polish universities, international degree programmes and student life."
-        },
-
-        "Netherlands": {
-            flag: "🇳🇱",
-            capital: "Amsterdam",
-            region: "Europe",
-            population: "18 million",
-            currency: "Euro",
-            description: "Explore Dutch universities, English-taught courses, careers and living expenses."
-        },
-
-        "New Zealand": {
-            flag: "🇳🇿",
-            capital: "Wellington",
-            region: "Oceania",
-            population: "5.3 million",
-            currency: "New Zealand Dollar",
-            description: "Discover New Zealand universities, education opportunities and lifestyle."
-        },
-
-        "Ireland": {
-            flag: "🇮🇪",
-            capital: "Dublin",
-            region: "Europe",
-            population: "5.4 million",
-            currency: "Euro",
-            description: "Explore Irish universities, technology careers, international education and living costs."
-        },
-
-        "Czechia": {
-            flag: "🇨🇿",
-            capital: "Prague",
-            region: "Europe",
-            population: "10.9 million",
-            currency: "Czech Koruna",
-            description: "Discover Czech universities, engineering programmes, student life and accommodation."
-        }
-
+    const defaultStyle = {
+        color: "#647d8c",
+        weight: 0.7,
+        opacity: 0.9,
+        fillColor: "#244b50",
+        fillOpacity: 0.48
     };
 
+    const hoverStyle = {
+        color: "#8df5b5",
+        weight: 1.8,
+        fillColor: "#5ccf99",
+        fillOpacity: 0.78
+    };
 
-    // 3. COUNTRY PANEL ELEMENTS
+    const selectedStyle = {
+        color: "#b3ffd0",
+        weight: 2,
+        fillColor: "#45c98c",
+        fillOpacity: 0.85
+    };
 
+    // Country information panel elements.
     const placeholder = document.getElementById("panel-placeholder");
     const details = document.getElementById("country-details");
 
-    const flagElement = document.getElementById("country-flag");
-    const nameElement = document.getElementById("country-name");
-    const descriptionElement = document.getElementById("country-description");
-    const capitalElement = document.getElementById("country-capital");
-    const regionElement = document.getElementById("country-region");
-    const populationElement = document.getElementById("country-population");
-    const currencyElement = document.getElementById("country-currency");
+    const fields = {
+        flag: document.getElementById("country-flag"),
+        name: document.getElementById("country-name"),
+        description: document.getElementById("country-description"),
+        capital: document.getElementById("country-capital"),
+        region: document.getElementById("country-region"),
+        population: document.getElementById("country-population"),
+        currency: document.getElementById("country-currency")
+    };
 
-    const exploreButton = document.getElementById("explore-country-button");
+    function showMapError(message) {
+        mapElement.innerHTML = "";
 
-    let selectedCountry = null;
-    let selectedLayer = null;
+        const error = document.createElement("div");
+        error.style.cssText =
+            "padding:24px;color:#edf4f5;font:14px sans-serif;line-height:1.8";
+        error.textContent = message;
 
+        mapElement.appendChild(error);
+    }
 
-    // 4. SELECT A COUNTRY
+    function getCountryName(feature) {
+        const properties = feature.properties || {};
 
-    function selectCountry(countryName, layer) {
+        return (
+            properties.ADMIN ||
+            properties.name ||
+            properties.NAME ||
+            properties.NAME_EN ||
+            "Unknown country"
+        );
+    }
 
-        selectedCountry = countryName;
+    function getCountryCode(feature) {
+        const properties = feature.properties || {};
 
-        if (selectedLayer) {
-            selectedLayer.setStyle({
-                color: "#9aabbc",
-                weight: 1,
-                fillColor: "#29465a",
-                fillOpacity: 0.28
-            });
+        const code =
+            properties.ISO_A3 ||
+            properties.ADM0_A3 ||
+            properties.SOV_A3 ||
+            "";
+
+        return code === "-99" ? "" : code;
+    }
+
+    function formatPopulation(value) {
+        if (value === null || value === undefined || value === "") {
+            return "Unavailable";
         }
 
-        selectedLayer = layer || null;
+        const number = Number(value);
 
-        if (selectedLayer) {
-            selectedLayer.setStyle({
-                color: "#8df5b5",
-                weight: 2,
-                fillColor: "#8df5b5",
-                fillOpacity: 0.55
-            });
+        return Number.isFinite(number)
+            ? new Intl.NumberFormat("en-US", {
+                notation: "compact",
+                maximumFractionDigits: 1
+            }).format(number)
+            : "Unavailable";
+    }
 
-            if (selectedLayer.bringToFront) {
-                selectedLayer.bringToFront();
+    function setField(element, value) {
+        if (element) {
+            element.textContent = value || "Unavailable";
+        }
+    }
+
+    function showCountryPanel(country) {
+        if (placeholder) placeholder.hidden = true;
+        if (details) details.hidden = false;
+
+        setField(fields.flag, country.flag || "🌍");
+        setField(fields.name, country.name);
+        setField(fields.description, country.description);
+        setField(fields.capital, country.capital);
+        setField(fields.region, country.region);
+        setField(fields.population, country.population);
+        setField(fields.currency, country.currency);
+
+        selectedCountry = country;
+    }
+
+    async function loadCountryDetails(feature) {
+        const name = getCountryName(feature);
+        const code = getCountryCode(feature);
+
+        const country = {
+            name: name,
+            flag: "🌍",
+            capital: "Loading...",
+            region: "Loading...",
+            population: "Loading...",
+            currency: "Loading...",
+            description:
+                "Explore education, living costs, career opportunities and lifestyle in " +
+                name + "."
+        };
+
+        showCountryPanel(country);
+
+        // Get country facts from the REST Countries public API.
+        try {
+            let url = "";
+
+            if (code && /^[A-Z]{3}$/.test(code)) {
+                url =
+                    "https://restcountries.com/v3.1/alpha/" +
+                    encodeURIComponent(code) +
+                    "?fields=name,capital,region,subregion,population,currencies,flags,cca2";
+            } else {
+                url =
+                    "https://restcountries.com/v3.1/name/" +
+                    encodeURIComponent(name) +
+                    "?fullText=true&fields=name,capital,region,subregion,population,currencies,flags,cca2";
             }
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error("Country information unavailable.");
+            }
+
+            const result = await response.json();
+            const data = Array.isArray(result) ? result[0] : result;
+
+            if (!data) {
+                throw new Error("No country data returned.");
+            }
+
+            const currencyNames = Object.values(data.currencies || {})
+                .map(currency => {
+                    if (!currency) return "";
+                    return currency.name
+                        ? `${currency.name} (${currency.symbol || ""})`
+                        : "";
+                })
+                .filter(Boolean);
+
+            const capital = Array.isArray(data.capital)
+                ? data.capital.join(", ")
+                : "";
+
+            const region = [data.region, data.subregion]
+                .filter(Boolean)
+                .join(" · ");
+
+            const flag = data.flags?.svg
+                ? `<img src="${data.flags.svg}" alt="" style="width:42px;height:30px;object-fit:contain">`
+                : "";
+
+            if (flag && fields.flag) {
+                fields.flag.textContent = "";
+                const image = document.createElement("img");
+                image.src = data.flags.svg;
+                image.alt = `${name} flag`;
+                image.style.cssText =
+                    "width:42px;height:30px;object-fit:contain";
+                fields.flag.appendChild(image);
+            }
+
+            setField(fields.capital, capital || "Unavailable");
+            setField(fields.region, region || "Unavailable");
+            setField(fields.population, formatPopulation(data.population));
+            setField(
+                fields.currency,
+                currencyNames.join(", ") || "Unavailable"
+            );
+
+            if (selectedCountry && selectedCountry.name === name) {
+                selectedCountry = {
+                    ...country,
+                    flag: flag || "🌍",
+                    capital: capital || "Unavailable",
+                    region: region || "Unavailable",
+                    population: formatPopulation(data.population),
+                    currency: currencyNames.join(", ") || "Unavailable"
+                };
+            }
+        } catch (error) {
+            console.warn("Could not load country details:", error);
+
+            setField(fields.capital, "Unavailable");
+            setField(fields.region, "Unavailable");
+            setField(fields.population, "Unavailable");
+            setField(fields.currency, "Unavailable");
+        }
+    }
+
+    function selectCountry(feature, layer) {
+        if (selectedLayer && countryLayer) {
+            countryLayer.resetStyle(selectedLayer);
         }
 
-        const data = countryData[countryName];
+        selectedLayer = layer;
+        layer.setStyle(selectedStyle);
 
-        placeholder.hidden = true;
-        details.hidden = false;
+        if (layer.bringToFront) {
+            layer.bringToFront();
+        }
 
-        flagElement.textContent = data ? data.flag : "🌍";
-        nameElement.textContent = countryName;
+        loadCountryDetails(feature);
+    }
 
-        descriptionElement.textContent = data
-            ? data.description
-            : "Explore education, living costs, careers and lifestyle in " + countryName + ".";
+    function attachCountryEvents(feature, layer) {
+        const name = getCountryName(feature);
 
-        capitalElement.textContent = data ? data.capital : "Explore details";
-        regionElement.textContent = data ? data.region : "Country";
-        populationElement.textContent = data ? data.population : "See country profile";
-        currencyElement.textContent = data ? data.currency : "See country profile";
+        layer.bindTooltip(name, {
+            sticky: true,
+            direction: "top"
+        });
 
-        document.getElementById("country-panel").scrollIntoView({
-            behavior: "smooth",
-            block: "nearest"
+        layer.on({
+            mouseover: function () {
+                if (layer !== selectedLayer) {
+                    layer.setStyle(hoverStyle);
+                }
+            },
+
+            mouseout: function () {
+                if (layer !== selectedLayer && countryLayer) {
+                    countryLayer.resetStyle(layer);
+                }
+            },
+
+            click: function () {
+                selectCountry(feature, layer);
+            }
         });
     }
 
-
-    // 5. LOAD CLICKABLE COUNTRY BOUNDARIES
-    // Country boundaries are loaded from a public GeoJSON dataset.
-
-    const geoJsonURL =
-        "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
-
-    fetch(geoJsonURL)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Could not load country boundaries.");
-            }
-
-            return response.json();
-        })
-        .then(geojson => {
-
-            const countryLayer = L.geoJSON(geojson, {
-
-                style: {
-                    color: "#9aabbc",
-                    weight: 1,
-                    fillColor: "#29465a",
-                    fillOpacity: 0.28
-                },
-
-                onEachFeature: function (feature, layer) {
-
-                    const properties = feature.properties || {};
-
-                    const countryName =
-                        properties.ADMIN ||
-                        properties.name ||
-                        properties.NAME ||
-                        properties.name_long;
-
-                    if (!countryName) return;
-
-                    layer.bindTooltip(countryName, {
-                        sticky: true,
-                        direction: "top"
-                    });
-
-                    layer.on({
-
-                        mouseover: function () {
-                            if (layer !== selectedLayer) {
-                                layer.setStyle({
-                                    color: "#8df5b5",
-                                    weight: 2,
-                                    fillOpacity: 0.5
-                                });
-                            }
-                        },
-
-                        mouseout: function () {
-                            if (layer !== selectedLayer) {
-                                countryLayer.resetStyle(layer);
-
-                                if (layer === selectedLayer) {
-                                    layer.setStyle({
-                                        color: "#8df5b5",
-                                        weight: 2,
-                                        fillColor: "#8df5b5",
-                                        fillOpacity: 0.55
-                                    });
-                                }
-                            }
-                        },
-
-                        click: function () {
-                            selectCountry(countryName, layer);
-                        }
-
-                    });
-                }
-
-            }).addTo(map);
-
-            console.log("Global Explorer: Country boundaries loaded!");
-
-        })
-        .catch(error => {
-            console.error("Country map data could not be loaded:", error);
-        });
-
-
-    // 6. EXPLORE COUNTRY BUTTON
-
-    exploreButton.addEventListener("click", function () {
-
-        if (!selectedCountry) return;
-
-        const countrySlug = selectedCountry
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "");
-
-        alert(
-            "Welcome to " + selectedCountry + "!\n\n" +
-            "The detailed country dashboard is our next development stage.\n\n" +
-            "Planned sections:\n" +
-            "• Study and universities\n" +
-            "• Cost of living\n" +
-            "• Careers and economy\n" +
-            "• Visas and immigration\n" +
-            "• Culture and lifestyle\n\n" +
-            "Country page identifier: " + countrySlug
+    // Load geographic boundaries for countries around the world.
+    try {
+        const geoResponse = await fetch(
+            "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
         );
 
-    });
+        if (!geoResponse.ok) {
+            throw new Error("World country boundaries could not be loaded.");
+        }
 
+        const geoData = await geoResponse.json();
 
-    // 7. FINISH INITIALIZATION
+        countryLayer = L.geoJSON(geoData, {
+            style: defaultStyle,
+            onEachFeature: attachCountryEvents
+        }).addTo(map);
 
-    setTimeout(function () {
-        map.invalidateSize();
-    }, 300);
+        // Fit the map to a world view.
+        map.fitBounds(countryLayer.getBounds(), {
+            padding: [10, 10]
+        });
 
-} else {
+        // Ensure Leaflet uses the correct dimensions.
+        setTimeout(() => map.invalidateSize(), 200);
 
-    console.error(
-        "Global Explorer: Map element or Leaflet library was not found."
-    );
+    } catch (error) {
+        console.error("Map loading failed:", error);
 
+        showMapError(
+            "The world map could not load. Check your internet connection and refresh the page."
+        );
+
+        return;
+    }
+
+    // Reset button.
+    const resetButton = document.getElementById("reset-map");
+
+    if (resetButton) {
+        resetButton.addEventListener("click", () => {
+            map.fitBounds(countryLayer.getBounds(), {
+                padding: [10, 10]
+            });
+
+            if (selectedLayer) {
+                countryLayer.resetStyle(selectedLayer);
+                selectedLayer = null;
+            }
+
+            selectedCountry = null;
+
+            if (placeholder) placeholder.hidden = false;
+            if (details) details.hidden = true;
+        });
+    }
+
+    // Allow the main Explore button to focus the map.
+    const exploreButton = document.getElementById("explore-country-button");
+
+    if (exploreButton) {
+        exploreButton.addEventListener("click", () => {
+            const mapArea = document.getElementById("map");
+
+            if (mapArea) {
+                mapArea.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+                map.invalidateSize();
+            }
+        });
+    }
+
+    // Allow the sidebar to return the user to the map.
+    const worldButton = document.querySelector(".tool-button");
+
+    if (worldButton) {
+        worldButton.addEventListener("click", () => {
+            map.fitBounds(countryLayer.getBounds(), {
+                padding: [10, 10]
+            });
+        });
+    }
 }
 ```
