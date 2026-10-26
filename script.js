@@ -387,8 +387,16 @@ function initGlobalExplorer() {
             setTimeout(() => map.invalidateSize(), 300);
 
             console.log("Global Explorer map loaded.");
-        })
-        .catch(error => {
+        })const loadingScreen = document.getElementById("map-loading");
+
+if (loadingScreen) {
+    loadingScreen.classList.add("is-hidden");
+}
+        .catch(error => {const loadingScreen = document.getElementById("map-loading");
+
+if (loadingScreen) {
+    loadingScreen.classList.add("is-hidden");
+}
             console.error("Map loading error:", error);
 
             const message = document.createElement("p");
