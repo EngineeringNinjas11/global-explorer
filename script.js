@@ -484,4 +484,3 @@ function initGlobalExplorer() {
         map.invalidateSize();
     });
 }
-```
