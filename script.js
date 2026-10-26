@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", initGlobalExplorer);
 
 function initGlobalExplorer() {
@@ -14,10 +13,7 @@ function initGlobalExplorer() {
         return;
     }
 
-    // =========================
-    // 1. INITIALIZE WORLD MAP
-    // =========================
-
+    // 1. INITIALIZE MAP
     const map = L.map("map", {
         worldCopyJump: true
     }).setView([20, 0], 2);
@@ -37,8 +33,7 @@ function initGlobalExplorer() {
         color: "#64748b",
         weight: 1,
         fillColor: "#94a3b8",
-        fillOpacity: 0.15,
-        interactive: true
+        fillOpacity: 0.15
     };
 
     const hoverStyle = {
@@ -55,36 +50,16 @@ function initGlobalExplorer() {
         fillOpacity: 0.55
     };
 
-    // =========================
-    // 2. COUNTRY PANEL ELEMENTS
-    // =========================
-
-    const panelPlaceholder =
-        document.getElementById("panel-placeholder");
-
-    const countryDetails =
-        document.getElementById("country-details");
-
-    const countryFlag =
-        document.getElementById("country-flag");
-
-    const countryName =
-        document.getElementById("country-name");
-
-    const countryDescription =
-        document.getElementById("country-description");
-
-    const countryCapital =
-        document.getElementById("country-capital");
-
-    const countryRegion =
-        document.getElementById("country-region");
-
-    const countryPopulation =
-        document.getElementById("country-population");
-
-    const countryCurrency =
-        document.getElementById("country-currency");
+    // 2. COUNTRY PANEL
+    const panelPlaceholder = document.getElementById("panel-placeholder");
+    const countryDetails = document.getElementById("country-details");
+    const countryFlag = document.getElementById("country-flag");
+    const countryName = document.getElementById("country-name");
+    const countryDescription = document.getElementById("country-description");
+    const countryCapital = document.getElementById("country-capital");
+    const countryRegion = document.getElementById("country-region");
+    const countryPopulation = document.getElementById("country-population");
+    const countryCurrency = document.getElementById("country-currency");
 
     function setText(element, value) {
         if (element) {
@@ -93,26 +68,26 @@ function initGlobalExplorer() {
     }
 
     function getCountryName(feature) {
-        const properties = feature.properties || {};
+        const p = feature.properties || {};
 
         return (
-            properties.ADMIN ||
-            properties.name ||
-            properties.NAME ||
-            properties.NAME_EN ||
-            properties.admin ||
+            p.ADMIN ||
+            p.name ||
+            p.NAME ||
+            p.NAME_EN ||
+            p.admin ||
             "Unknown country"
         );
     }
 
     function getCountryCode(feature) {
-        const properties = feature.properties || {};
+        const p = feature.properties || {};
 
         const codes = [
-            properties.ISO_A3,
-            properties.ISO_A3_EH,
-            properties.ADM0_A3,
-            properties.iso_a3
+            p.ISO_A3,
+            p.ISO_A3_EH,
+            p.ADM0_A3,
+            p.iso_a3
         ];
 
         for (const code of codes) {
@@ -121,16 +96,34 @@ function initGlobalExplorer() {
                 /^[A-Z]{3}$/i.test(code) &&
                 code !== "-99"
             ) {
-                return code.toLowerCase();
+                return code.toUpperCase();
             }
         }
 
         return "";
     }
 
-    // =========================
-    // 3. DISPLAY COUNTRY PANEL
-    // =========================
+    function getISO2(feature) {
+        const p = feature.properties || {};
+
+        const possibleCodes = [
+            p.ISO_A2,
+            p.ISO_A2_EH,
+            p.iso_a2
+        ];
+
+        for (const code of possibleCodes) {
+            if (
+                typeof code === "string" &&
+                /^[A-Z]{2}$/i.test(code) &&
+                code !== "-99"
+            ) {
+                return code.toLowerCase();
+            }
+        }
+
+        return "";
+    }
 
     function showCountryPanel(feature) {
         const name = getCountryName(feature);
@@ -144,6 +137,7 @@ function initGlobalExplorer() {
         }
 
         setText(countryName, name);
+
         setText(
             countryDescription,
             `Discover education, living costs, careers and opportunities in ${name}.`
@@ -160,55 +154,127 @@ function initGlobalExplorer() {
         }
     }
 
-    // =========================
-    // 4. FETCH COUNTRY DATA
-    // =========================
-
+    // 3. LOAD COUNTRY INFORMATION
     async function fetchCountryData(feature) {
         const name = getCountryName(feature);
         const code = getCountryCode(feature);
 
-        const fields =
-            "name,capital,region,subregion,population,currencies,flags";
+        let worldBankCountry = null;
+        let population = null;
+        let extraInfo = null;
 
-        const urls = [];
-
+        // World Bank: capital, region and country metadata
         if (code) {
-            urls.push(
-                `https://restcountries.com/v3.1/alpha/${encodeURIComponent(code)}?fields=${fields}`
-            );
-        }
-
-        urls.push(
-            `https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fields=${fields}`
-        );
-
-        for (const url of urls) {
             try {
-                const response = await fetch(url);
+                const response = await fetch(
+                    `https://api.worldbank.org/v2/country/${encodeURIComponent(code)}?format=json`
+                );
 
-                if (!response.ok) {
-                    continue;
-                }
+                if (response.ok) {
+                    const data = await response.json();
 
-                const data = await response.json();
-                const country = Array.isArray(data) ? data[0] : data;
-
-                if (country && country.name) {
-                    return country;
+                    if (
+                        Array.isArray(data) &&
+                        Array.isArray(data[1]) &&
+                        data[1][0]
+                    ) {
+                        worldBankCountry = data[1][0];
+                    }
                 }
             } catch (error) {
-                console.warn("Country API request failed:", error);
+                console.warn("World Bank country request failed:", error);
+            }
+
+            // World Bank: population data
+            try {
+                const response = await fetch(
+                    `https://api.worldbank.org/v2/country/${encodeURIComponent(code)}/indicator/SP.POP.TOTL?format=json&per_page=100`
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    if (Array.isArray(data) && Array.isArray(data[1])) {
+                        const latest = data[1].find(
+                            item => item.value !== null
+                        );
+
+                        if (latest) {
+                            population = latest.value;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn("Population request failed:", error);
             }
         }
 
-        throw new Error(`Country information unavailable for ${name}`);
+        // CountriesNow: capital, currency and flag
+        try {
+            const response = await fetch(
+                "https://countriesnow.space/api/v0.1/countries/info?returns=capital,currency,flag,iso2,iso3",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        country: name
+                    })
+                }
+            );
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (
+                    result &&
+                    result.data &&
+                    !result.error
+                ) {
+                    extraInfo = result.data;
+                }
+            }
+        } catch (error) {
+            console.warn("Additional country data request failed:", error);
+        }
+
+        if (!worldBankCountry && !extraInfo) {
+            throw new Error(`Country information unavailable for ${name}`);
+        }
+
+        return {
+            name: worldBankCountry?.name || name,
+
+            capital:
+                worldBankCountry?.capitalCity ||
+                extraInfo?.capital ||
+                "Not available",
+
+            region:
+                worldBankCountry?.region?.value ||
+                "Not available",
+
+            subregion:
+                worldBankCountry?.adminregion?.value || "",
+
+            population: population,
+
+            currency:
+                extraInfo?.currency ||
+                "Not available",
+
+            iso2:
+                worldBankCountry?.iso2Code?.toLowerCase() ||
+                extraInfo?.iso2?.toLowerCase() ||
+                getISO2(feature),
+
+            flag:
+                extraInfo?.flag || ""
+        };
     }
 
-    // =========================
-    // 5. LOAD COUNTRY DETAILS
-    // =========================
-
+    // 4. DISPLAY COUNTRY INFORMATION
     async function loadCountryDetails(feature) {
         const currentRequest = ++requestNumber;
         const fallbackName = getCountryName(feature);
@@ -218,39 +284,20 @@ function initGlobalExplorer() {
         try {
             const country = await fetchCountryData(feature);
 
+            // Ignore old requests if another country was clicked
             if (currentRequest !== requestNumber) {
                 return;
             }
 
-            const name = country.name?.common || fallbackName;
+            setText(countryName, country.name);
+            setText(countryCapital, country.capital);
 
-            const capital = Array.isArray(country.capital)
-                ? country.capital.join(", ")
-                : "Not available";
-
-            const region = [
+            const regionText = [
                 country.region,
                 country.subregion
-            ].filter(Boolean).join(" — ") || "Not available";
+            ].filter(Boolean).join(" — ");
 
-            let currency = "Not available";
-
-            if (country.currencies) {
-                currency = Object.entries(country.currencies)
-                    .map(([code, details]) => {
-                        const currencyName = details.name || code;
-                        const symbol = details.symbol
-                            ? ` (${details.symbol})`
-                            : "";
-
-                        return `${currencyName}${symbol}`;
-                    })
-                    .join(", ");
-            }
-
-            setText(countryName, name);
-            setText(countryCapital, capital);
-            setText(countryRegion, region);
+            setText(countryRegion, regionText);
 
             setText(
                 countryPopulation,
@@ -259,24 +306,26 @@ function initGlobalExplorer() {
                     : "Not available"
             );
 
-            setText(countryCurrency, currency);
+            setText(countryCurrency, country.currency);
 
             setText(
                 countryDescription,
-                `Explore education, living costs, careers and opportunities in ${name}.`
+                `Explore education, living costs, careers and opportunities in ${country.name}.`
             );
 
             if (countryFlag) {
                 countryFlag.replaceChildren();
 
-                const flagURL =
-                    country.flags?.svg || country.flags?.png;
+                const flagURL = country.flag ||
+                    (country.iso2
+                        ? `https://flagcdn.com/${country.iso2}.svg`
+                        : "");
 
                 if (flagURL) {
                     const image = document.createElement("img");
 
                     image.src = flagURL;
-                    image.alt = `${name} flag`;
+                    image.alt = `${country.name} flag`;
                     image.style.width = "48px";
                     image.style.height = "32px";
                     image.style.objectFit = "contain";
@@ -300,15 +349,12 @@ function initGlobalExplorer() {
 
             setText(
                 countryDescription,
-                `We couldn't load information for ${fallbackName}. Please check your internet connection and try again.`
+                `We couldn't load information for ${fallbackName}. Please try again later.`
             );
         }
     }
 
-    // =========================
-    // 6. COUNTRY CLICK HANDLER
-    // =========================
-
+    // 5. COUNTRY SELECTION
     function selectCountry(feature, layer) {
         console.log("Country clicked:", getCountryName(feature));
 
@@ -327,7 +373,6 @@ function initGlobalExplorer() {
 
         loadCountryDetails(feature);
 
-        // Zoom in without losing the selected country.
         try {
             map.fitBounds(layer.getBounds(), {
                 padding: [25, 25],
@@ -362,10 +407,7 @@ function initGlobalExplorer() {
         });
     }
 
-    // =========================
-    // 7. LOAD COUNTRY BOUNDARIES
-    // =========================
-
+    // 6. LOAD WORLD MAP
     fetch(
         "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
     )
@@ -383,15 +425,10 @@ function initGlobalExplorer() {
                 interactive: true
             }).addTo(map);
 
-            // Explicitly allow mouse interaction with country shapes.
             countryLayer.eachLayer(layer => {
-                if (layer.getElement) {
-                    const element = layer.getElement();
-
-                    if (element) {
-                        element.style.pointerEvents = "auto";
-                        element.style.cursor = "pointer";
-                    }
+                if (layer.getElement()) {
+                    layer.getElement().style.pointerEvents = "auto";
+                    layer.getElement().style.cursor = "pointer";
                 }
             });
 
@@ -399,20 +436,6 @@ function initGlobalExplorer() {
 
             setTimeout(() => {
                 map.invalidateSize();
-
-                // Reapply interaction styles after map rendering.
-                if (countryLayer) {
-                    countryLayer.eachLayer(layer => {
-                        if (layer.getElement) {
-                            const element = layer.getElement();
-
-                            if (element) {
-                                element.style.pointerEvents = "auto";
-                                element.style.cursor = "pointer";
-                            }
-                        }
-                    });
-                }
             }, 300);
 
             console.log("Global Explorer map loaded successfully.");
@@ -423,16 +446,13 @@ function initGlobalExplorer() {
             const message = document.createElement("p");
 
             message.textContent =
-                "The map could not load. Please refresh the page and check your internet connection.";
+                "The map could not load. Please refresh and check your internet connection.";
 
             message.style.padding = "20px";
             mapElement.appendChild(message);
         });
 
-    // =========================
-    // 8. RESET MAP BUTTON
-    // =========================
-
+    // 7. RESET MAP BUTTON
     const resetButton = document.getElementById("reset-map");
 
     if (resetButton) {
@@ -459,12 +479,10 @@ function initGlobalExplorer() {
         });
     }
 
-    // =========================
-    // 9. EXPLORE COUNTRY BUTTON
-    // =========================
-
-    const exploreButton =
-        document.getElementById("explore-country-button");
+    // 8. EXPLORE COUNTRY BUTTON
+    const exploreButton = document.getElementById(
+        "explore-country-button"
+    );
 
     if (exploreButton) {
         exploreButton.addEventListener("click", () => {
@@ -476,10 +494,7 @@ function initGlobalExplorer() {
         });
     }
 
-    // =========================
-    // 10. MAP RESIZE
-    // =========================
-
+    // 9. MAP RESIZE
     window.addEventListener("resize", () => {
         map.invalidateSize();
     });
