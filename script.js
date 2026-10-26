@@ -1,90 +1,65 @@
+document.addEventListener("DOMContentLoaded", () => {
+    initGlobalExplorer();
+});
 
-/* ==========================================
-   GLOBAL EXPLORER — INTERACTIVE WORLD MAP
-   ========================================== */
-
-document.addEventListener("DOMContentLoaded", initGlobalExplorer);
-
-async function initGlobalExplorer() {
+function initGlobalExplorer() {
     const mapElement = document.getElementById("map");
 
     if (!mapElement) {
-        console.error("Map container #map was not found.");
+        console.error('Map element "#map" was not found.');
         return;
     }
 
-    if (typeof L === "undefined") {
-        showMapError("The map library could not load. Please refresh the page.");
-        return;
-    }
-
-    // Create the interactive world map.
+    // MAP SETUP
     const map = L.map("map", {
-        center: [20, 0],
-        zoom: 2,
-        minZoom: 2,
-        maxZoom: 8,
         worldCopyJump: true
-    });
+    }).setView([20, 0], 2);
 
-    // OpenStreetMap base layer.
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        noWrap: true,
-        maxZoom: 19
+        maxZoom: 18
     }).addTo(map);
 
     let countryLayer;
     let selectedLayer = null;
     let selectedCountry = null;
+    let requestNumber = 0;
 
-    const defaultStyle = {
-        color: "#647d8c",
-        weight: 0.7,
-        opacity: 0.9,
-        fillColor: "#244b50",
-        fillOpacity: 0.48
+    const countryStyle = {
+        color: "#64748b",
+        weight: 1,
+        fillColor: "#94a3b8",
+        fillOpacity: 0.15
     };
 
     const hoverStyle = {
-        color: "#8df5b5",
-        weight: 1.8,
-        fillColor: "#5ccf99",
-        fillOpacity: 0.78
+        color: "#2563eb",
+        weight: 2,
+        fillColor: "#60a5fa",
+        fillOpacity: 0.4
     };
 
     const selectedStyle = {
-        color: "#b3ffd0",
+        color: "#1d4ed8",
         weight: 2,
-        fillColor: "#45c98c",
-        fillOpacity: 0.85
+        fillColor: "#3b82f6",
+        fillOpacity: 0.5
     };
 
-    // Country information panel elements.
-    const placeholder = document.getElementById("panel-placeholder");
-    const details = document.getElementById("country-details");
+    // HTML ELEMENTS
+    const panelPlaceholder = document.getElementById("panel-placeholder");
+    const countryDetails = document.getElementById("country-details");
 
-    const fields = {
-        flag: document.getElementById("country-flag"),
-        name: document.getElementById("country-name"),
-        description: document.getElementById("country-description"),
-        capital: document.getElementById("country-capital"),
-        region: document.getElementById("country-region"),
-        population: document.getElementById("country-population"),
-        currency: document.getElementById("country-currency")
-    };
+    const countryFlag = document.getElementById("country-flag");
+    const countryName = document.getElementById("country-name");
+    const countryDescription = document.getElementById("country-description");
 
-    function showMapError(message) {
-        mapElement.innerHTML = "";
+    const countryCapital = document.getElementById("country-capital");
+    const countryRegion = document.getElementById("country-region");
+    const countryPopulation = document.getElementById("country-population");
+    const countryCurrency = document.getElementById("country-currency");
 
-        const error = document.createElement("div");
-        error.style.cssText =
-            "padding:24px;color:#edf4f5;font:14px sans-serif;line-height:1.8";
-        error.textContent = message;
-
-        mapElement.appendChild(error);
-    }
-
+    // GET COUNTRY NAME FROM MAP DATA
     function getCountryName(feature) {
         const properties = feature.properties || {};
 
@@ -93,289 +68,352 @@ async function initGlobalExplorer() {
             properties.name ||
             properties.NAME ||
             properties.NAME_EN ||
+            properties.admin ||
             "Unknown country"
         );
     }
 
+    // GET COUNTRY CODE FROM MAP DATA
     function getCountryCode(feature) {
         const properties = feature.properties || {};
 
-        const code =
-            properties.ISO_A3 ||
-            properties.ADM0_A3 ||
-            properties.SOV_A3 ||
-            "";
+        const possibleCodes = [
+            properties.ISO_A3,
+            properties.ADM0_A3,
+            properties.SOV_A3,
+            properties.ISO_A3_EH,
+            properties.iso_a3
+        ];
 
-        return code === "-99" ? "" : code;
-    }
-
-    function formatPopulation(value) {
-        if (value === null || value === undefined || value === "") {
-            return "Unavailable";
+        for (const value of possibleCodes) {
+            if (
+                typeof value === "string" &&
+                /^[A-Z]{3}$/i.test(value) &&
+                value !== "-99"
+            ) {
+                return value.toLowerCase();
+            }
         }
 
-        const number = Number(value);
-
-        return Number.isFinite(number)
-            ? new Intl.NumberFormat("en-US", {
-                notation: "compact",
-                maximumFractionDigits: 1
-            }).format(number)
-            : "Unavailable";
+        return "";
     }
 
-    function setField(element, value) {
+    // UPDATE A FIELD SAFELY
+    function setText(element, value) {
         if (element) {
-            element.textContent = value || "Unavailable";
+            element.textContent = value || "Not available";
         }
     }
 
-    function showCountryPanel(country) {
-        if (placeholder) placeholder.hidden = true;
-        if (details) details.hidden = false;
+    // FORMAT POPULATION
+    function formatPopulation(population) {
+        if (typeof population !== "number") {
+            return "Not available";
+        }
 
-        setField(fields.flag, country.flag || "🌍");
-        setField(fields.name, country.name);
-        setField(fields.description, country.description);
-        setField(fields.capital, country.capital);
-        setField(fields.region, country.region);
-        setField(fields.population, country.population);
-        setField(fields.currency, country.currency);
-
-        selectedCountry = country;
+        return population.toLocaleString("en-US");
     }
 
-    async function loadCountryDetails(feature) {
+    // SHOW COUNTRY PANEL
+    function showCountryPanel(feature) {
+        const name = getCountryName(feature);
+
+        if (panelPlaceholder) {
+            panelPlaceholder.style.display = "none";
+        }
+
+        if (countryDetails) {
+            countryDetails.style.display = "block";
+        }
+
+        setText(countryName, name);
+        setText(countryDescription, `Explore information about ${name}.`);
+
+        setText(countryCapital, "Loading...");
+        setText(countryRegion, "Loading...");
+        setText(countryPopulation, "Loading...");
+        setText(countryCurrency, "Loading...");
+
+        if (countryFlag) {
+            countryFlag.replaceChildren();
+            countryFlag.textContent = "🌍";
+        }
+    }
+
+    // FETCH COUNTRY DATA
+    async function fetchCountryData(feature) {
         const name = getCountryName(feature);
         const code = getCountryCode(feature);
 
-        const country = {
-            name: name,
-            flag: "🌍",
-            capital: "Loading...",
-            region: "Loading...",
-            population: "Loading...",
-            currency: "Loading...",
-            description:
-                "Explore education, living costs, career opportunities and lifestyle in " +
-                name + "."
-        };
+        // First try the country code, then fall back to the country name.
+        const endpoints = [];
 
-        showCountryPanel(country);
-
-        // Get country facts from the REST Countries public API.
-        try {
-            let url = "";
-
-            if (code && /^[A-Z]{3}$/.test(code)) {
-                url =
-                    "https://restcountries.com/v3.1/alpha/" +
-                    encodeURIComponent(code) +
-                    "?fields=name,capital,region,subregion,population,currencies,flags,cca2";
-            } else {
-                url =
-                    "https://restcountries.com/v3.1/name/" +
-                    encodeURIComponent(name) +
-                    "?fullText=true&fields=name,capital,region,subregion,population,currencies,flags,cca2";
-            }
-
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error("Country information unavailable.");
-            }
-
-            const result = await response.json();
-            const data = Array.isArray(result) ? result[0] : result;
-
-            if (!data) {
-                throw new Error("No country data returned.");
-            }
-
-            const currencyNames = Object.values(data.currencies || {})
-                .map(currency => {
-                    if (!currency) return "";
-                    return currency.name
-                        ? `${currency.name} (${currency.symbol || ""})`
-                        : "";
-                })
-                .filter(Boolean);
-
-            const capital = Array.isArray(data.capital)
-                ? data.capital.join(", ")
-                : "";
-
-            const region = [data.region, data.subregion]
-                .filter(Boolean)
-                .join(" · ");
-
-            const flag = data.flags?.svg
-                ? `<img src="${data.flags.svg}" alt="" style="width:42px;height:30px;object-fit:contain">`
-                : "";
-
-            if (flag && fields.flag) {
-                fields.flag.textContent = "";
-                const image = document.createElement("img");
-                image.src = data.flags.svg;
-                image.alt = `${name} flag`;
-                image.style.cssText =
-                    "width:42px;height:30px;object-fit:contain";
-                fields.flag.appendChild(image);
-            }
-
-            setField(fields.capital, capital || "Unavailable");
-            setField(fields.region, region || "Unavailable");
-            setField(fields.population, formatPopulation(data.population));
-            setField(
-                fields.currency,
-                currencyNames.join(", ") || "Unavailable"
+        if (code) {
+            endpoints.push(
+                `https://restcountries.com/v3.1/alpha/${encodeURIComponent(code)}?fields=name,capital,region,subregion,population,currencies,flags,cca3`
             );
+        }
 
-            if (selectedCountry && selectedCountry.name === name) {
-                selectedCountry = {
-                    ...country,
-                    flag: flag || "🌍",
-                    capital: capital || "Unavailable",
-                    region: region || "Unavailable",
-                    population: formatPopulation(data.population),
-                    currency: currencyNames.join(", ") || "Unavailable"
-                };
+        endpoints.push(
+            `https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fields=name,capital,region,subregion,population,currencies,flags,cca3`
+        );
+
+        for (const endpoint of endpoints) {
+            try {
+                const response = await fetch(endpoint);
+
+                if (!response.ok) {
+                    continue;
+                }
+
+                const result = await response.json();
+
+                const country = Array.isArray(result)
+                    ? result[0]
+                    : result;
+
+                if (
+                    country &&
+                    typeof country === "object" &&
+                    country.name
+                ) {
+                    return country;
+                }
+            } catch (error) {
+                console.warn("Country data request failed:", endpoint, error);
             }
+        }
+
+        throw new Error(`Could not retrieve information for ${name}.`);
+    }
+
+    // LOAD COUNTRY DETAILS
+    async function loadCountryDetails(feature) {
+        const thisRequest = ++requestNumber;
+        const name = getCountryName(feature);
+
+        showCountryPanel(feature);
+
+        try {
+            const country = await fetchCountryData(feature);
+
+            // Prevent old requests from replacing the latest selection.
+            if (thisRequest !== requestNumber) {
+                return;
+            }
+
+            const capital = Array.isArray(country.capital)
+                ? country.capital.join(", ")
+                : "Not available";
+
+            const region = [
+                country.region,
+                country.subregion
+            ].filter(Boolean).join(" — ") || "Not available";
+
+            let currency = "Not available";
+
+            if (country.currencies) {
+                const currencies = Object.entries(country.currencies);
+
+                if (currencies.length > 0) {
+                    currency = currencies
+                        .map(([code, details]) => {
+                            const currencyName = details?.name || code;
+                            const symbol = details?.symbol
+                                ? ` (${details.symbol})`
+                                : "";
+
+                            return `${currencyName}${symbol}`;
+                        })
+                        .join(", ");
+                }
+            }
+
+            setText(countryName, country.name?.common || name);
+            setText(countryCapital, capital);
+            setText(countryRegion, region);
+            setText(countryPopulation, formatPopulation(country.population));
+            setText(countryCurrency, currency);
+
+            if (countryDescription) {
+                setText(
+                    countryDescription,
+                    `Discover education, living costs, careers and opportunities in ${
+                        country.name?.common || name
+                    }.`
+                );
+            }
+
+            if (countryFlag) {
+                countryFlag.replaceChildren();
+
+                if (country.flags?.svg || country.flags?.png) {
+                    const image = document.createElement("img");
+
+                    image.src = country.flags.svg || country.flags.png;
+                    image.alt = `${country.name?.common || name} flag`;
+                    image.style.width = "48px";
+                    image.style.height = "32px";
+                    image.style.objectFit = "contain";
+
+                    countryFlag.appendChild(image);
+                } else {
+                    countryFlag.textContent = "🌍";
+                }
+            }
+
         } catch (error) {
-            console.warn("Could not load country details:", error);
+            if (thisRequest !== requestNumber) {
+                return;
+            }
 
-            setField(fields.capital, "Unavailable");
-            setField(fields.region, "Unavailable");
-            setField(fields.population, "Unavailable");
-            setField(fields.currency, "Unavailable");
+            console.error("Unable to load country details:", error);
+
+            setText(countryCapital, "Could not load");
+            setText(countryRegion, "Could not load");
+            setText(countryPopulation, "Could not load");
+            setText(countryCurrency, "Could not load");
+
+            if (countryDescription) {
+                setText(
+                    countryDescription,
+                    `We couldn't load information for ${name}. Please check your internet connection and try again.`
+                );
+            }
         }
     }
 
-    function selectCountry(feature, layer) {
-        if (selectedLayer && countryLayer) {
-            countryLayer.resetStyle(selectedLayer);
-        }
-
-        selectedLayer = layer;
-        layer.setStyle(selectedStyle);
-
-        if (layer.bringToFront) {
-            layer.bringToFront();
-        }
-
-        loadCountryDetails(feature);
-    }
-
-    function attachCountryEvents(feature, layer) {
+    // COUNTRY CLICK AND HOVER
+    function onEachCountry(feature, layer) {
         const name = getCountryName(feature);
 
         layer.bindTooltip(name, {
-            sticky: true,
-            direction: "top"
+            sticky: true
         });
 
         layer.on({
-            mouseover: function () {
-                if (layer !== selectedLayer) {
-                    layer.setStyle(hoverStyle);
+            mouseover: function (event) {
+                const target = event.target;
+
+                if (target !== selectedLayer) {
+                    target.setStyle(hoverStyle);
+                }
+
+                if (typeof target.bringToFront === "function") {
+                    target.bringToFront();
                 }
             },
 
-            mouseout: function () {
-                if (layer !== selectedLayer && countryLayer) {
-                    countryLayer.resetStyle(layer);
+            mouseout: function (event) {
+                const target = event.target;
+
+                if (target !== selectedLayer && countryLayer) {
+                    countryLayer.resetStyle(target);
                 }
             },
 
-            click: function () {
-                selectCountry(feature, layer);
+            click: function (event) {
+                if (selectedLayer && countryLayer) {
+                    countryLayer.resetStyle(selectedLayer);
+                }
+
+                selectedLayer = event.target;
+                selectedCountry = feature;
+
+                selectedLayer.setStyle(selectedStyle);
+
+                if (typeof selectedLayer.bringToFront === "function") {
+                    selectedLayer.bringToFront();
+                }
+
+                map.fitBounds(selectedLayer.getBounds(), {
+                    padding: [30, 30],
+                    maxZoom: 5
+                });
+
+                loadCountryDetails(feature);
             }
         });
     }
 
-    // Load geographic boundaries for countries around the world.
-    try {
-        const geoResponse = await fetch(
-            "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
-        );
+    // LOAD WORLD COUNTRY BOUNDARIES
+    fetch(
+        "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
+    )
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Could not load the world map data.");
+            }
 
-        if (!geoResponse.ok) {
-            throw new Error("World country boundaries could not be loaded.");
-        }
+            return response.json();
+        })
+        .then(data => {
+            countryLayer = L.geoJSON(data, {
+                style: countryStyle,
+                onEachFeature: onEachCountry
+            }).addTo(map);
 
-        const geoData = await geoResponse.json();
+            map.fitBounds(countryLayer.getBounds());
 
-        countryLayer = L.geoJSON(geoData, {
-            style: defaultStyle,
-            onEachFeature: attachCountryEvents
-        }).addTo(map);
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
+        })
+        .catch(error => {
+            console.error("Map loading error:", error);
 
-        // Fit the map to a world view.
-        map.fitBounds(countryLayer.getBounds(), {
-            padding: [10, 10]
+            if (mapElement) {
+                const message = document.createElement("p");
+
+                message.textContent =
+                    "The map could not load. Please check your internet connection and refresh the page.";
+
+                message.style.padding = "20px";
+                mapElement.appendChild(message);
+            }
         });
 
-        // Ensure Leaflet uses the correct dimensions.
-        setTimeout(() => map.invalidateSize(), 200);
-
-    } catch (error) {
-        console.error("Map loading failed:", error);
-
-        showMapError(
-            "The world map could not load. Check your internet connection and refresh the page."
-        );
-
-        return;
-    }
-
-    // Reset button.
+    // RESET MAP BUTTON
     const resetButton = document.getElementById("reset-map");
 
     if (resetButton) {
         resetButton.addEventListener("click", () => {
-            map.fitBounds(countryLayer.getBounds(), {
-                padding: [10, 10]
-            });
-
-            if (selectedLayer) {
+            if (selectedLayer && countryLayer) {
                 countryLayer.resetStyle(selectedLayer);
-                selectedLayer = null;
             }
 
+            selectedLayer = null;
             selectedCountry = null;
+            requestNumber++;
 
-            if (placeholder) placeholder.hidden = false;
-            if (details) details.hidden = true;
+            map.setView([20, 0], 2);
+
+            if (panelPlaceholder) {
+                panelPlaceholder.style.display = "";
+            }
+
+            if (countryDetails) {
+                countryDetails.style.display = "none";
+            }
         });
     }
 
-    // Allow the main Explore button to focus the map.
+    // EXPLORE COUNTRY BUTTON
     const exploreButton = document.getElementById("explore-country-button");
 
     if (exploreButton) {
         exploreButton.addEventListener("click", () => {
-            const mapArea = document.getElementById("map");
-
-            if (mapArea) {
-                mapArea.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
-
-                map.invalidateSize();
+            if (selectedCountry) {
+                loadCountryDetails(selectedCountry);
+            } else {
+                alert("Bro, first click on a country on the map!");
             }
         });
     }
 
-    // Allow the sidebar to return the user to the map.
-    const worldButton = document.querySelector(".tool-button");
-
-    if (worldButton) {
-        worldButton.addEventListener("click", () => {
-            map.fitBounds(countryLayer.getBounds(), {
-                padding: [10, 10]
-            });
-        });
-    }
+    // INITIAL MAP RESIZE
+    window.addEventListener("resize", () => {
+        map.invalidateSize();
+    });
 }
-
