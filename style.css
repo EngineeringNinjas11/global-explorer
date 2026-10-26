@@ -1,0 +1,68 @@
+```css
+/* =========================================
+   GLOBAL EXPLORER — MAIN STYLESHEET
+   ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg: #080d18;
+    --surface: #101827;
+    --surface-light: #172235;
+    --border: rgba(255, 255, 255, 0.09);
+    --text: #f4f7fc;
+    --muted: #99a8bc;
+    --accent: #8df5b5;
+    --accent-dark: #153c2a;
+    --radius: 20px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 90px;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+button,
+a {
+    font: inherit;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+/* NAVIGATION */
+
+.navbar {
+    min-height: 78px;
+    padding: 0 
