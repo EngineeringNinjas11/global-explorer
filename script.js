@@ -221,8 +221,9 @@ function initGlobalExplorer() {
         }
 
         if (countryDetails) {
-            countryDetails.style.display = "block";
-        }
+    countryDetails.hidden = false;
+    countryDetails.style.display = "block";
+}
 
         setText(countryName, name);
 
